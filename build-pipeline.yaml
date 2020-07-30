@@ -1,0 +1,49 @@
+# This Task is from the Tekton Catalog (last updated 04/02/18):
+# https://github.com/tektoncd/catalog/blob/master/buildah/buildah.yaml
+# This Task uses buildah to build and push an image.
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: buildah
+spec:
+  params:
+  - name: DOCKERFILE
+    description: Path to the Dockerfile to build.
+    default: ./Docker/Dockerfile
+  resources:
+    inputs:
+    - name: source
+      type: git
+    outputs:
+    - name: image
+      type: image
+
+  steps:
+  - name: build
+    workingDir: /workspace/source
+    command: ['docker build .']
+    securityContext:
+      privileged: true
+---
+# This Pipeline builds and deploys an image on OpenShift.
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: build-k8s
+spec:
+  resources:
+  - name: source
+    type: git
+  - name: image
+    type: image
+  tasks:
+  - name: build
+    taskRef:
+      name: buildah
+    resources:
+      inputs:
+      - name: source
+        resource: source
+      outputs:
+      - name: image
+        resource: image
